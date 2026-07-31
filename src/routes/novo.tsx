@@ -33,7 +33,7 @@ export const Route = createFileRoute("/novo")({
       },
     ],
   }),
-  component: NewQuote;
+  component: NewQuote,
 });
 
 function readFile(file: File): Promise<string> {
