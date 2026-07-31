@@ -1,0 +1,60 @@
+export type QuoteItem = {
+  id: string;
+  product: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+};
+
+export function formatBRL(value: number): string {
+  return (Number.isFinite(value) ? value : 0).toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+export function parseBRL(input: string): number {
+  const cleaned = input
+    .replace(/[^\d,.-]/g, "")
+    .replace(/\.(?=\d{3}(\D|$))/g, "")
+    .replace(",", ".");
+  const parsed = Number.parseFloat(cleaned);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function quoteTotal(items: QuoteItem[]): number {
+  return items.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
+}
+
+export function buildMessage(params: {
+  storeName: string;
+  pixKey: string;
+  items: QuoteItem[];
+  total: number;
+}): string {
+  const blocks = params.items
+    .map(
+      (item) =>
+        `• ${item.quantity}x ${item.product}\n   R$ ${formatBRL(item.unitPrice)} cada → R$ ${formatBRL(item.totalPrice)}`,
+    )
+    .join("\n\n");
+
+  return `🛍️ *${params.storeName}*
+
+Segue o orçamento solicitado:
+
+📦 Itens
+
+${blocks}
+
+━━━━━━━━━━━━━━
+💰 *Total: R$ ${formatBRL(params.total)}*
+━━━━━━━━━━━━━━
+
+💳 Forma de pagamento:
+Pix: ${params.pixKey}
+
+Após a confirmação do pagamento, iniciaremos a separação do pedido.
+
+Agradecemos a preferência! 😊`;
+}
