@@ -1,0 +1,393 @@
+import { useMemo, useRef, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { extractQuote } from "@/lib/ocr.functions";
+import {
+  buildMessage,
+  formatBRL,
+  parseBRL,
+  quoteTotal,
+  type QuoteItem,
+} from "@/lib/quote-format";
+
+export const Route = createFileRoute("/novo")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    loja: typeof search["loja"] === "string" ? search["loja"] : "",
+  }),
+  head: () => ({
+    meta: [
+      { title: "Novo orçamento | Balcão" },
+      {
+        name: "description",
+        content:
+          "Fotografe a tela do PDV, revise os itens lidos pela IA e copie a mensagem pronta do orçamento.",
+      },
+      { property: "og:title", content: "Novo orçamento | Balcão" },
+      {
+        property: "og:description",
+        content:
+          "Fotografe a tela do PDV, revise os itens e copie a mensagem pronta.",
+      },
+    ],
+  }),
+  component: NewQuote,
+});
+
+function readFile(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Falha ao ler a foto"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function NewQuote() {
+  const { loja } = Route.useSearch();
+  const navigate = useNavigate();
+  const runExtract = useServerFn(extractQuote);
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [items, setItems] = useState<QuoteItem[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const store = useQuery({
+    queryKey: ["store", loja],
+    enabled: Boolean(loja),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("stores")
+        .select("id, name, pix_key")
+        .eq("id", loja)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const total = useMemo(() => quoteTotal(items ?? []), [items]);
+
+  const message = useMemo(
+    () =>
+      store.data && items
+        ? buildMessage({
+            storeName: store.data.name,
+            pixKey: store.data.pix_key,
+            items,
+            total,
+          })
+        : "",
+    [store.data, items, total],
+  );
+
+  async function addPhotos(files: FileList | null) {
+    if (!files?.length) return;
+    const encoded = await Promise.all(Array.from(files).slice(0, 6).map(readFile));
+    setPhotos((prev) => [...prev, ...encoded].slice(0, 6));
+  }
+
+  async function analyse() {
+    if (!photos.length) return;
+    setLoading(true);
+    try {
+      const result = await runExtract({ data: { images: photos } });
+      if (!result.items.length) {
+        toast.error("Nenhum item encontrado nas fotos.");
+        return;
+      }
+      setItems(
+        result.items.map((item, index) => ({
+          id: `${index}-${item.product}`,
+          product: item.product,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          totalPrice: item.totalPrice,
+        })),
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Não foi possível ler as fotos.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function updateItem(id: string, patch: Partial<QuoteItem>) {
+    setItems((prev) =>
+      (prev ?? []).map((item) => {
+        if (item.id !== id) return item;
+        const next = { ...item, ...patch };
+        if (patch.quantity !== undefined || patch.unitPrice !== undefined) {
+          next.totalPrice = next.quantity * next.unitPrice;
+        }
+        return next;
+      }),
+    );
+  }
+
+  async function confirmAndCopy() {
+    if (!store.data || !items) return;
+    setSaving(true);
+    try {
+      const { data: quote, error } = await supabase
+        .from("quotes")
+        .insert({ store_id: store.data.id, total, status: "enviado" })
+        .select("id")
+        .single();
+      if (error) throw error;
+
+      const { error: itemsError } = await supabase.from("quote_items").insert(
+        items.map((item, index) => ({
+          quote_id: quote.id,
+          product: item.product,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          total_price: item.totalPrice,
+          position: index,
+        })),
+      );
+      if (itemsError) throw itemsError;
+
+      await navigator.clipboard.writeText(message);
+      toast.success("Mensagem copiada!");
+      void navigate({ to: "/" });
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Não foi possível salvar.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!loja || (store.isFetched && !store.data)) {
+    return (
+      <main className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center gap-4 px-5">
+        <p className="text-muted-foreground">Loja não encontrada.</p>
+        <Link to="/" className="font-semibold text-primary">
+          Voltar
+        </Link>
+      </main>
+    );
+  }
+
+  return (
+    <main className="mx-auto min-h-screen w-full max-w-md px-5 pt-12 pb-40">
+      <div className="mb-6 flex items-center gap-3">
+        <Link to="/" className="text-2xl leading-none text-primary">
+          ‹
+        </Link>
+        <div>
+          <p className="text-xs font-medium text-muted-foreground">
+            {store.data?.name ?? "Carregando…"}
+          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {items ? "Revisar orçamento" : "Novo orçamento"}
+          </h1>
+        </div>
+      </div>
+
+      {!items && (
+        <section className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Tire uma ou mais fotos da tela do PDV. A IA lê os itens
+            automaticamente.
+          </p>
+
+          <input
+            ref={fileInput}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            multiple
+            className="hidden"
+            onChange={(event) => {
+              void addPhotos(event.target.files);
+              event.target.value = "";
+            }}
+          />
+
+          <button
+            type="button"
+            onClick={() => fileInput.current?.click()}
+            className="flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border bg-surface py-12 shadow-card transition active:scale-[0.98]"
+          >
+            <span className="text-3xl">📷</span>
+            <span className="font-semibold text-primary">Adicionar foto</span>
+            <span className="text-xs text-muted-foreground">
+              Até 6 fotos por orçamento
+            </span>
+          </button>
+
+          {photos.length > 0 && (
+            <div className="grid grid-cols-3 gap-3">
+              {photos.map((photo, index) => (
+                <div
+                  key={index}
+                  className="relative aspect-3/4 overflow-hidden rounded-xl bg-surface shadow-card"
+                >
+                  <img
+                    src={photo}
+                    alt={`Foto ${index + 1} da tela do PDV`}
+                    className="h-full w-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    aria-label="Remover foto"
+                    onClick={() =>
+                      setPhotos((prev) => prev.filter((_, i) => i !== index))
+                    }
+                    className="absolute top-1 right-1 grid h-6 w-6 place-items-center rounded-full bg-foreground/70 text-xs text-background"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {items && (
+        <section className="space-y-6">
+          <div className="space-y-3">
+            {items.map((item) => (
+              <div
+                key={item.id}
+                className="space-y-3 rounded-2xl bg-surface p-4 shadow-card"
+              >
+                <input
+                  value={item.product}
+                  onChange={(event) =>
+                    updateItem(item.id, { product: event.target.value })
+                  }
+                  aria-label="Produto"
+                  className="w-full rounded-xl bg-muted px-3 py-3 text-base font-medium outline-none focus:ring-2 focus:ring-ring"
+                />
+                <div className="grid grid-cols-3 gap-2">
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[11px] text-muted-foreground">Qtd</span>
+                    <input
+                      inputMode="numeric"
+                      value={item.quantity}
+                      onChange={(event) =>
+                        updateItem(item.id, {
+                          quantity: Math.max(
+                            1,
+                            Number.parseInt(event.target.value, 10) || 1,
+                          ),
+                        })
+                      }
+                      className="rounded-xl bg-muted px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-ring"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[11px] text-muted-foreground">
+                      Unitário
+                    </span>
+                    <input
+                      inputMode="decimal"
+                      value={formatBRL(item.unitPrice)}
+                      onChange={(event) =>
+                        updateItem(item.id, {
+                          unitPrice: parseBRL(event.target.value),
+                        })
+                      }
+                      className="rounded-xl bg-muted px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-ring"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[11px] text-muted-foreground">
+                      Total
+                    </span>
+                    <input
+                      inputMode="decimal"
+                      value={formatBRL(item.totalPrice)}
+                      onChange={(event) =>
+                        updateItem(item.id, {
+                          totalPrice: parseBRL(event.target.value),
+                        })
+                      }
+                      className="rounded-xl bg-muted px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-ring"
+                    />
+                  </label>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setItems(
+                      (prev) => prev?.filter((entry) => entry.id !== item.id) ?? [],
+                    )
+                  }
+                  className="text-xs font-medium text-destructive"
+                >
+                  Remover item
+                </button>
+              </div>
+            ))}
+
+            <button
+              type="button"
+              onClick={() =>
+                setItems((prev) => [
+                  ...(prev ?? []),
+                  {
+                    id: `manual-${Date.now()}`,
+                    product: "",
+                    quantity: 1,
+                    unitPrice: 0,
+                    totalPrice: 0,
+                  },
+                ])
+              }
+              className="w-full rounded-2xl border border-dashed border-border py-3 text-sm font-semibold text-primary"
+            >
+              + Adicionar item
+            </button>
+          </div>
+
+          <div>
+            <h2 className="mb-2 text-sm font-semibold text-muted-foreground">
+              Prévia da mensagem
+            </h2>
+            <div className="rounded-2xl bg-bubble px-4 py-3 shadow-card">
+              <pre className="font-sans text-[13px] leading-relaxed whitespace-pre-wrap text-bubble-foreground">
+                {message}
+              </pre>
+            </div>
+          </div>
+        </section>
+      )}
+
+      <div className="fixed inset-x-0 bottom-0 mx-auto w-full max-w-md safe-bottom bg-linear-to-t from-background via-background to-transparent px-5 pt-6">
+        {!items ? (
+          <button
+            type="button"
+            disabled={!photos.length || loading}
+            onClick={() => void analyse()}
+            className="w-full rounded-2xl bg-primary py-4 text-base font-semibold text-primary-foreground shadow-raised transition active:scale-[0.98] disabled:opacity-40 disabled:shadow-none"
+          >
+            {loading ? "Lendo as fotos…" : "Ler com IA"}
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled={saving || !items.length}
+            onClick={() => void confirmAndCopy()}
+            className="w-full rounded-2xl bg-primary py-4 text-base font-semibold text-primary-foreground shadow-raised transition active:scale-[0.98] disabled:opacity-40"
+          >
+            {saving
+              ? "Salvando…"
+              : `Copiar mensagem · R$ ${formatBRL(total)}`}
+          </button>
+        )}
+      </div>
+    </main>
+  );
+}
