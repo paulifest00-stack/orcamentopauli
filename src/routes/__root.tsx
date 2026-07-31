@@ -81,20 +81,24 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         name: "viewport",
         content: "width=device-width, initial-scale=1, viewport-fit=cover",
       },
-      { title: "Orçamentos | Balcão" },
+      { title: "Orçamentos PauliFest & Moda Fantasy" },
       {
         name: "description",
         content:
-          "Gere orçamentos de WhatsApp a partir de fotos da tela do PDV.",
+          "Fotografe a tela do PDV e gere a mensagem de orçamento pronta para o WhatsApp em segundos.",
       },
-      { property: "og:title", content: "Orçamentos | Balcão" },
+      { property: "og:title", content: "Orçamentos PauliFest & Moda Fantasy" },
       {
         property: "og:description",
         content:
-          "Gere orçamentos de WhatsApp a partir de fotos da tela do PDV.",
+          "Fotografe a tela do PDV e gere a mensagem de orçamento pronta para o WhatsApp em segundos.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Orçamentos PauliFest & Moda Fantasy" },
+      { name: "twitter:description", content: "Fotografe a tela do PDV e gere a mensagem de orçamento pronta para o WhatsApp em segundos." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/fb1efe98-ec89-4be6-8b2f-4970013ed2bf/id-preview-8c12710b--3f32fc99-8d1e-43f7-97c4-4f5d5ceff3e2.lovable.app-1785505353395.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/fb1efe98-ec89-4be6-8b2f-4970013ed2bf/id-preview-8c12710b--3f32fc99-8d1e-43f7-97c4-4f5d5ceff3e2.lovable.app-1785505353395.png" },
     ],
     links: [
       {
