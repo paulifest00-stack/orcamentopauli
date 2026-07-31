@@ -113,3 +113,13 @@
 @utility safe-bottom {
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
 }
+
+/* Hide the "Made with Lovable" badge injected by the platform preview. */
+iframe[src*="lovable.app/badge"],
+a[href*="lovable.app"][target="_blank"][rel*="noopener"],
+[data-lovable-badge],
+.lovable-badge,
+[id^="lovable-badge"],
+[class*="lovable-badge"] {
+  display: none !important;
+}
