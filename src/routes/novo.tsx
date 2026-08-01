@@ -204,37 +204,57 @@ function NewQuote() {
         </div>
       </div>
 
+      <input
+        ref={cameraInput}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        multiple
+        className="hidden"
+        onChange={(event) => {
+          void addPhotos(event.target.files);
+          event.target.value = "";
+        }}
+      />
+      <input
+        ref={galleryInput}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={(event) => {
+          void addPhotos(event.target.files);
+          event.target.value = "";
+        }}
+      />
+
       {!items && (
         <section className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Tire uma ou mais fotos da tela do PDV. A IA lê os itens
-            automaticamente.
+            Tire fotos da tela do PDV ou escolha imagens da galeria. A IA lê os
+            itens automaticamente.
           </p>
-
-          <input
-            ref={fileInput}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            multiple
-            className="hidden"
-            onChange={(event) => {
-              void addPhotos(event.target.files);
-              event.target.value = "";
-            }}
-          />
 
           <button
             type="button"
-            onClick={() => fileInput.current?.click()}
+            onClick={() => cameraInput.current?.click()}
             className="flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border bg-surface py-12 shadow-card transition active:scale-[0.98]"
           >
             <span className="text-3xl">📷</span>
-            <span className="font-semibold text-primary">Adicionar foto</span>
+            <span className="font-semibold text-primary">Tirar foto</span>
             <span className="text-xs text-muted-foreground">
-              Até 6 fotos por orçamento
+              Você pode adicionar várias fotos
             </span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => galleryInput.current?.click()}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-surface py-4 font-semibold text-primary shadow-card transition active:scale-[0.98]"
+          >
+            🖼️ Escolher da galeria
+          </button>
+
 
           {photos.length > 0 && (
             <div className="grid grid-cols-3 gap-3">
