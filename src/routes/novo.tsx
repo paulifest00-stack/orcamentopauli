@@ -47,14 +47,15 @@ function readFile(file: File): Promise<string> {
 
 function NewQuote() {
   const { loja } = Route.useSearch();
-  const navigate = useNavigate();
   const runExtract = useServerFn(extractQuote);
-  const fileInput = useRef<HTMLInputElement>(null);
+  const cameraInput = useRef<HTMLInputElement>(null);
+  const galleryInput = useRef<HTMLInputElement>(null);
 
   const [photos, setPhotos] = useState<string[]>([]);
   const [items, setItems] = useState<QuoteItem[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const store = useQuery({
     queryKey: ["store", loja],
@@ -77,7 +78,7 @@ function NewQuote() {
       store.data && items
         ? buildMessage({
             storeName: store.data.name,
-            pixKey: store.data.pix_key,
+            pixKey: store.data.pix_key ?? "",
             items,
             total,
           })
@@ -88,27 +89,29 @@ function NewQuote() {
   async function addPhotos(files: FileList | null) {
     if (!files?.length) return;
     const encoded = await Promise.all(Array.from(files).slice(0, 6).map(readFile));
-    setPhotos((prev) => [...prev, ...encoded].slice(0, 6));
+    setPhotos((prev) => [...prev, ...encoded].slice(0, 12));
+    if (items) void analyse(encoded, true);
   }
 
-  async function analyse() {
-    if (!photos.length) return;
+  async function analyse(source?: string[], append = false) {
+    const target = source ?? photos;
+    if (!target.length) return;
     setLoading(true);
     try {
-      const result = await runExtract({ data: { images: photos } });
+      const result = await runExtract({ data: { images: target.slice(0, 6) } });
       if (!result.items.length) {
         toast.error("Nenhum item encontrado nas fotos.");
         return;
       }
-      setItems(
-        result.items.map((item, index) => ({
-          id: `${index}-${item.product}`,
-          product: item.product,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          totalPrice: item.totalPrice,
-        })),
-      );
+      const mapped = result.items.map((item, index) => ({
+        id: `${Date.now()}-${index}-${item.product}`,
+        product: item.product,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.totalPrice,
+      }));
+      setItems((prev) => (append && prev ? [...prev, ...mapped] : mapped));
+      setCopied(false);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Não foi possível ler as fotos.",
@@ -119,6 +122,7 @@ function NewQuote() {
   }
 
   function updateItem(id: string, patch: Partial<QuoteItem>) {
+    setCopied(false);
     setItems((prev) =>
       (prev ?? []).map((item) => {
         if (item.id !== id) return item;
@@ -131,8 +135,21 @@ function NewQuote() {
     );
   }
 
-  async function confirmAndCopy() {
-    if (!store.data || !items) return;
+  async function copyMessage() {
+    if (!message) return;
+    try {
+      await navigator.clipboard.writeText(message);
+    } catch {
+      toast.error("Não foi possível copiar. Segure na prévia para copiar.");
+      return;
+    }
+    setCopied(true);
+    toast.success("Mensagem copiada!");
+    void saveQuote();
+  }
+
+  async function saveQuote() {
+    if (!store.data || !items || saving) return;
     setSaving(true);
     try {
       const { data: quote, error } = await supabase
@@ -153,14 +170,8 @@ function NewQuote() {
         })),
       );
       if (itemsError) throw itemsError;
-
-      await navigator.clipboard.writeText(message);
-      toast.success("Mensagem copiada!");
-      void navigate({ to: "/" });
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Não foi possível salvar.",
-      );
+    } catch {
+      // salvamento silencioso: a mensagem já foi copiada
     } finally {
       setSaving(false);
     }
