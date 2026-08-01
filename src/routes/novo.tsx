@@ -365,7 +365,8 @@ function NewQuote() {
 
             <button
               type="button"
-              onClick={() =>
+              onClick={() => {
+                setCopied(false);
                 setItems((prev) => [
                   ...(prev ?? []),
                   {
@@ -375,12 +376,36 @@ function NewQuote() {
                     unitPrice: 0,
                     totalPrice: 0,
                   },
-                ])
-              }
+                ]);
+              }}
               className="w-full rounded-2xl border border-dashed border-border py-3 text-sm font-semibold text-primary"
             >
               + Adicionar item
             </button>
+
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => cameraInput.current?.click()}
+                className="rounded-2xl bg-surface py-3 text-sm font-semibold text-primary shadow-card disabled:opacity-40"
+              >
+                📷 Mais fotos
+              </button>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => galleryInput.current?.click()}
+                className="rounded-2xl bg-surface py-3 text-sm font-semibold text-primary shadow-card disabled:opacity-40"
+              >
+                🖼️ Galeria
+              </button>
+            </div>
+            {loading && (
+              <p className="text-center text-xs text-muted-foreground">
+                Lendo as novas fotos…
+              </p>
+            )}
           </div>
 
           <div>
@@ -388,7 +413,7 @@ function NewQuote() {
               Prévia da mensagem
             </h2>
             <div className="rounded-2xl bg-bubble px-4 py-3 shadow-card">
-              <pre className="font-sans text-[13px] leading-relaxed whitespace-pre-wrap text-bubble-foreground">
+              <pre className="font-sans text-[13px] leading-relaxed whitespace-pre-wrap text-bubble-foreground select-all">
                 {message}
               </pre>
             </div>
@@ -409,16 +434,17 @@ function NewQuote() {
         ) : (
           <button
             type="button"
-            disabled={saving || !items.length}
-            onClick={() => void confirmAndCopy()}
+            disabled={!items.length}
+            onClick={() => void copyMessage()}
             className="w-full rounded-2xl bg-primary py-4 text-base font-semibold text-primary-foreground shadow-raised transition active:scale-[0.98] disabled:opacity-40"
           >
-            {saving
-              ? "Salvando…"
+            {copied
+              ? "✓ Copiado — pode continuar editando"
               : `Copiar mensagem · R$ ${formatBRL(total)}`}
           </button>
         )}
       </div>
+
     </main>
   );
 }
