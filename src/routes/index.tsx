@@ -2,7 +2,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatBRL } from "@/lib/quote-format";
-import iconUrl from "/favicon.png?url";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -64,7 +63,7 @@ function Home() {
     <main className="mx-auto min-h-screen w-full max-w-md px-5 pt-14 pb-32">
       <header className="mb-8 flex items-center gap-4">
         <img
-          src={iconUrl}
+          src="/favicon.png"
           alt="Ícone do app de orçamentos PauliFest"
           width={56}
           height={56}
