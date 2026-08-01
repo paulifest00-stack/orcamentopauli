@@ -81,13 +81,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         name: "viewport",
         content: "width=device-width, initial-scale=1, viewport-fit=cover",
       },
-      { title: "Orçamentos PauliFest & Moda Fantasy" },
+      { title: "Orçamentos PauliFest" },
       {
         name: "description",
         content:
           "Fotografe a tela do PDV e gere a mensagem de orçamento pronta para o WhatsApp em segundos.",
       },
-      { property: "og:title", content: "Orçamentos PauliFest & Moda Fantasy" },
+      { property: "og:title", content: "Orçamentos PauliFest" },
       {
         property: "og:description",
         content:
@@ -95,7 +95,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Orçamentos PauliFest & Moda Fantasy" },
+      { name: "twitter:title", content: "Orçamentos PauliFest" },
       { name: "twitter:description", content: "Fotografe a tela do PDV e gere a mensagem de orçamento pronta para o WhatsApp em segundos." },
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/fb1efe98-ec89-4be6-8b2f-4970013ed2bf/id-preview-8c12710b--3f32fc99-8d1e-43f7-97c4-4f5d5ceff3e2.lovable.app-1785505353395.png" },
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/fb1efe98-ec89-4be6-8b2f-4970013ed2bf/id-preview-8c12710b--3f32fc99-8d1e-43f7-97c4-4f5d5ceff3e2.lovable.app-1785505353395.png" },
@@ -105,7 +105,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/favicon.png", type: "image/png" },
+      { rel: "apple-touch-icon", href: "/favicon.png" },
     ],
   }),
   shellComponent: RootShell,

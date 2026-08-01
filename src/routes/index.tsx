@@ -6,17 +6,17 @@ import { formatBRL } from "@/lib/quote-format";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Orçamentos PauliFest & Moda Fantasy" },
+      { title: "Orçamentos PauliFest" },
       {
         name: "description",
         content:
-          "Fotografe a tela do PDV e gere a mensagem de orçamento pronta para o WhatsApp em segundos.",
+          "Fotografe a tela do PDV e gere a mensagem de orçamento da PauliFest pronta para o WhatsApp em segundos.",
       },
-      { property: "og:title", content: "Orçamentos PauliFest & Moda Fantasy" },
+      { property: "og:title", content: "Orçamentos PauliFest" },
       {
         property: "og:description",
         content:
-          "Fotografe a tela do PDV e gere a mensagem de orçamento pronta para o WhatsApp em segundos.",
+          "Fotografe a tela do PDV e gere a mensagem de orçamento da PauliFest pronta para o WhatsApp em segundos.",
       },
     ],
   }),
@@ -32,13 +32,15 @@ const statusLabel: Record<string, string> = {
 };
 
 function Home() {
-  const stores = useQuery({
-    queryKey: ["stores"],
+  const store = useQuery({
+    queryKey: ["store", "paulifest"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("stores")
         .select("id, name, pix_key")
-        .order("name");
+        .order("created_at")
+        .limit(1)
+        .maybeSingle();
       if (error) throw error;
       return data;
     },
@@ -49,7 +51,7 @@ function Home() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("quotes")
-        .select("id, total, status, created_at, stores(name)")
+        .select("id, total, status, created_at")
         .order("created_at", { ascending: false })
         .limit(8);
       if (error) throw error;
@@ -58,49 +60,36 @@ function Home() {
   });
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-md px-5 pt-14 pb-8">
-      <header className="mb-8">
-        <p className="text-sm font-medium text-muted-foreground">Balcão</p>
-        <h1 className="mt-1 text-[2rem] leading-tight font-semibold tracking-tight">
-          Orçamentos
-        </h1>
+    <main className="mx-auto min-h-screen w-full max-w-md px-5 pt-14 pb-32">
+      <header className="mb-8 flex items-center gap-4">
+        <img
+          src="/favicon.png"
+          alt="Ícone do app de orçamentos PauliFest"
+          width={56}
+          height={56}
+          className="h-14 w-14 rounded-2xl shadow-card"
+        />
+        <div>
+          <p className="text-sm font-medium text-muted-foreground">Balcão</p>
+          <h1 className="text-[1.75rem] leading-tight font-semibold tracking-tight">
+            PauliFest
+          </h1>
+        </div>
       </header>
 
-      <h2 className="mb-3 text-sm font-semibold text-muted-foreground">
-        Escolha a loja
-      </h2>
-
-      <div className="space-y-3">
-        {stores.isLoading &&
-          [0, 1].map((i) => (
-            <div
-              key={i}
-              className="h-[92px] animate-pulse rounded-2xl bg-surface shadow-card"
-            />
-          ))}
-
-        {stores.data?.map((store) => (
-          <Link
-            key={store.id}
-            to="/novo"
-            search={{ loja: store.id }}
-            className="flex items-center justify-between rounded-2xl bg-surface px-5 py-6 shadow-card transition active:scale-[0.98]"
-          >
-            <span className="flex flex-col gap-1">
-              <span className="text-lg font-semibold">{store.name}</span>
-              {store.pix_key?.trim() ? (
-                <span className="text-sm text-muted-foreground">
-                  Pix: {store.pix_key}
-                </span>
-              ) : null}
-            </span>
-            <span className="text-2xl text-primary">›</span>
-          </Link>
-        ))}
+      <div className="rounded-2xl bg-surface px-5 py-6 shadow-card">
+        <p className="text-sm text-muted-foreground">
+          Tire fotos da tela do PDV e a IA monta a mensagem do orçamento.
+        </p>
+        {store.data?.pix_key?.trim() ? (
+          <p className="mt-3 text-sm text-muted-foreground">
+            Pix: <span className="font-medium text-foreground">{store.data.pix_key}</span>
+          </p>
+        ) : null}
       </div>
 
       {quotes.data && quotes.data.length > 0 && (
-        <section className="mt-10">
+        <section className="mt-8">
           <h2 className="mb-3 text-sm font-semibold text-muted-foreground">
             Últimos orçamentos
           </h2>
@@ -110,18 +99,13 @@ function Home() {
                 key={quote.id}
                 className="flex items-center justify-between border-b border-border px-5 py-4 last:border-b-0"
               >
-                <span className="flex flex-col">
-                  <span className="font-medium">
-                    {(quote.stores as { name: string } | null)?.name ?? "Loja"}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(quote.created_at).toLocaleString("pt-BR", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
+                <span className="text-xs text-muted-foreground">
+                  {new Date(quote.created_at).toLocaleString("pt-BR", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </span>
                 <span className="flex flex-col items-end">
                   <span className="font-semibold">
@@ -136,6 +120,17 @@ function Home() {
           </ul>
         </section>
       )}
+
+      <div className="fixed inset-x-0 bottom-0 mx-auto w-full max-w-md px-5 pb-6 pt-4">
+        <Link
+          to="/novo"
+          search={{ loja: store.data?.id ?? "" }}
+          disabled={!store.data}
+          className="flex h-14 w-full items-center justify-center rounded-2xl bg-primary text-base font-semibold text-primary-foreground shadow-card transition active:scale-[0.98] aria-disabled:opacity-50"
+        >
+          Novo orçamento
+        </Link>
+      </div>
     </main>
   );
 }
