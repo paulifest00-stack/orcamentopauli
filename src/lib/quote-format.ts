@@ -39,6 +39,13 @@ export function buildMessage(params: {
     )
     .join("\n\n");
 
+  const pix = params.pixKey?.trim()
+    ? `💳 Forma de pagamento:
+Pix: ${params.pixKey.trim()}
+
+`
+    : "";
+
   return `🛍️ *${params.storeName}*
 
 Segue o orçamento solicitado:
@@ -51,10 +58,7 @@ ${blocks}
 💰 *Total: R$ ${formatBRL(params.total)}*
 ━━━━━━━━━━━━━━
 
-💳 Forma de pagamento:
-Pix: ${params.pixKey}
-
-Após a confirmação do pagamento, iniciaremos a separação do pedido.
+${pix}Após a confirmação do pagamento, iniciaremos a separação do pedido.
 
 Agradecemos a preferência! 😊`;
 }
