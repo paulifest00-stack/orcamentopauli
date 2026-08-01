@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatBRL } from "@/lib/quote-format";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -51,7 +53,7 @@ function Home() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("quotes")
-        .select("id, total, status, created_at")
+        .select("id, total, status, created_at, quote_items(id, product, quantity, unit_price, total_price)")
         .order("created_at", { ascending: false })
         .limit(8);
       if (error) throw error;
@@ -95,27 +97,7 @@ function Home() {
           </h2>
           <ul className="overflow-hidden rounded-2xl bg-surface shadow-card">
             {quotes.data.map((quote) => (
-              <li
-                key={quote.id}
-                className="flex items-center justify-between border-b border-border px-5 py-4 last:border-b-0"
-              >
-                <span className="text-xs text-muted-foreground">
-                  {new Date(quote.created_at).toLocaleString("pt-BR", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
-                <span className="flex flex-col items-end">
-                  <span className="font-semibold">
-                    R$ {formatBRL(Number(quote.total))}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {statusLabel[quote.status] ?? quote.status}
-                  </span>
-                </span>
-              </li>
+              <QuoteListItem key={quote.id} quote={quote} storeId={store.data?.id} />
             ))}
           </ul>
         </section>
@@ -132,5 +114,96 @@ function Home() {
         </Link>
       </div>
     </main>
+  );
+}
+
+function QuoteListItem({ quote, storeId }: { quote: any, storeId?: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const qc = useQueryClient();
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDelete(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!confirm("Excluir este orçamento?")) return;
+    setDeleting(true);
+    
+    // First delete items
+    await supabase.from("quote_items").delete().eq("quote_id", quote.id);
+    const { error } = await supabase.from("quotes").delete().eq("id", quote.id);
+    
+    setDeleting(false);
+    if (error) {
+      toast.error("Erro ao apagar: " + error.message);
+    } else {
+      toast.success("Orçamento removido");
+      qc.invalidateQueries({ queryKey: ["quotes", "recent"] });
+    }
+  }
+
+  return (
+    <li className="flex flex-col border-b border-border last:border-b-0">
+      <div 
+        className="flex items-center justify-between px-5 py-4 cursor-pointer select-none"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <span className="text-xs text-muted-foreground">
+          {new Date(quote.created_at).toLocaleString("pt-BR", {
+            day: "2-digit",
+            month: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </span>
+        <span className="flex flex-col items-end">
+          <span className="font-semibold">
+            R$ {formatBRL(Number(quote.total))}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {statusLabel[quote.status] ?? quote.status}
+          </span>
+        </span>
+      </div>
+
+      {expanded && (
+        <div className="px-5 pb-4 space-y-3 border-t border-border/50 pt-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Itens do Orçamento</span>
+            <div className="flex gap-2">
+              <Link 
+                to="/novo" 
+                search={{ loja: storeId ?? "", id: quote.id }}
+                disabled={!storeId}
+                className="text-xs font-semibold text-primary px-3 py-1.5 bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
+              >
+                Editar
+              </Link>
+              <button 
+                disabled={deleting}
+                onClick={handleDelete}
+                className="text-xs font-semibold text-destructive px-3 py-1.5 bg-destructive/10 rounded-lg hover:bg-destructive/20 transition-colors disabled:opacity-50"
+              >
+                Apagar
+              </button>
+            </div>
+          </div>
+          
+          {quote.quote_items?.length > 0 ? (
+            <div className="space-y-2">
+              {quote.quote_items.map((item: any) => (
+                <div key={item.id} className="text-sm bg-muted/50 p-3 rounded-xl flex flex-col gap-1.5">
+                  <div className="font-medium text-foreground">{item.product || "Produto"}</div>
+                  <div className="flex justify-between text-muted-foreground text-xs items-center">
+                    <span>{item.quantity}x R$ {formatBRL(Number(item.unit_price))}</span>
+                    <span className="font-semibold text-foreground text-[13px]">R$ {formatBRL(Number(item.total_price))}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">Nenhum item salvo.</p>
+          )}
+        </div>
+      )}
+    </li>
   );
 }

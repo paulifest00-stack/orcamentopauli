@@ -16,6 +16,7 @@ import {
 export const Route = createFileRoute("/novo")({
   validateSearch: (search: Record<string, unknown>) => ({
     loja: typeof search["loja"] === "string" ? search["loja"] : "",
+    id: typeof search["id"] === "string" ? search["id"] : undefined,
   }),
   head: () => ({
     meta: [
@@ -46,7 +47,7 @@ function readFile(file: File): Promise<string> {
 }
 
 function NewQuote() {
-  const { loja } = Route.useSearch();
+  const { loja, id } = Route.useSearch();
   const runExtract = useServerFn(extractQuote);
   const cameraInput = useRef<HTMLInputElement>(null);
   const galleryInput = useRef<HTMLInputElement>(null);
@@ -67,6 +68,30 @@ function NewQuote() {
         .eq("id", loja)
         .maybeSingle();
       if (error) throw error;
+      return data;
+    },
+  });
+
+  useQuery({
+    queryKey: ["quote", id],
+    enabled: Boolean(id) && !items,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("quotes")
+        .select("id, quote_items(id, product, quantity, unit_price, total_price)")
+        .eq("id", id)
+        .maybeSingle();
+      if (error) throw error;
+      if (data?.quote_items) {
+        const mapped = data.quote_items.map((item) => ({
+          id: item.id,
+          product: item.product ?? "",
+          quantity: item.quantity ?? 1,
+          unitPrice: Number(item.unit_price ?? 0),
+          totalPrice: Number(item.total_price ?? 0),
+        }));
+        setItems(mapped);
+      }
       return data;
     },
   });
@@ -152,16 +177,27 @@ function NewQuote() {
     if (!store.data || !items || saving) return;
     setSaving(true);
     try {
-      const { data: quote, error } = await supabase
-        .from("quotes")
-        .insert({ store_id: store.data.id, total, status: "enviado" })
-        .select("id")
-        .single();
-      if (error) throw error;
+      let quoteId = id;
+      if (id) {
+        const { error } = await supabase
+          .from("quotes")
+          .update({ total, status: "enviado" })
+          .eq("id", id);
+        if (error) throw error;
+        await supabase.from("quote_items").delete().eq("quote_id", id);
+      } else {
+        const { data: quote, error } = await supabase
+          .from("quotes")
+          .insert({ store_id: store.data.id, total, status: "enviado" })
+          .select("id")
+          .single();
+        if (error) throw error;
+        quoteId = quote.id;
+      }
 
       const { error: itemsError } = await supabase.from("quote_items").insert(
         items.map((item, index) => ({
-          quote_id: quote.id,
+          quote_id: quoteId,
           product: item.product,
           quantity: item.quantity,
           unit_price: item.unitPrice,
