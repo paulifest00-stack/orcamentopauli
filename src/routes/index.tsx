@@ -88,9 +88,11 @@ function Home() {
           >
             <span className="flex flex-col gap-1">
               <span className="text-lg font-semibold">{store.name}</span>
-              <span className="text-sm text-muted-foreground">
-                Pix: {store.pix_key}
-              </span>
+              {store.pix_key?.trim() ? (
+                <span className="text-sm text-muted-foreground">
+                  Pix: {store.pix_key}
+                </span>
+              ) : null}
             </span>
             <span className="text-2xl text-primary">›</span>
           </Link>

@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -47,14 +47,15 @@ function readFile(file: File): Promise<string> {
 
 function NewQuote() {
   const { loja } = Route.useSearch();
-  const navigate = useNavigate();
   const runExtract = useServerFn(extractQuote);
-  const fileInput = useRef<HTMLInputElement>(null);
+  const cameraInput = useRef<HTMLInputElement>(null);
+  const galleryInput = useRef<HTMLInputElement>(null);
 
   const [photos, setPhotos] = useState<string[]>([]);
   const [items, setItems] = useState<QuoteItem[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const store = useQuery({
     queryKey: ["store", loja],
@@ -77,7 +78,7 @@ function NewQuote() {
       store.data && items
         ? buildMessage({
             storeName: store.data.name,
-            pixKey: store.data.pix_key,
+            pixKey: store.data.pix_key ?? "",
             items,
             total,
           })
@@ -88,27 +89,29 @@ function NewQuote() {
   async function addPhotos(files: FileList | null) {
     if (!files?.length) return;
     const encoded = await Promise.all(Array.from(files).slice(0, 6).map(readFile));
-    setPhotos((prev) => [...prev, ...encoded].slice(0, 6));
+    setPhotos((prev) => [...prev, ...encoded].slice(0, 12));
+    if (items) void analyse(encoded, true);
   }
 
-  async function analyse() {
-    if (!photos.length) return;
+  async function analyse(source?: string[], append = false) {
+    const target = source ?? photos;
+    if (!target.length) return;
     setLoading(true);
     try {
-      const result = await runExtract({ data: { images: photos } });
+      const result = await runExtract({ data: { images: target.slice(0, 6) } });
       if (!result.items.length) {
         toast.error("Nenhum item encontrado nas fotos.");
         return;
       }
-      setItems(
-        result.items.map((item, index) => ({
-          id: `${index}-${item.product}`,
-          product: item.product,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          totalPrice: item.totalPrice,
-        })),
-      );
+      const mapped = result.items.map((item, index) => ({
+        id: `${Date.now()}-${index}-${item.product}`,
+        product: item.product,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.totalPrice,
+      }));
+      setItems((prev) => (append && prev ? [...prev, ...mapped] : mapped));
+      setCopied(false);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Não foi possível ler as fotos.",
@@ -119,6 +122,7 @@ function NewQuote() {
   }
 
   function updateItem(id: string, patch: Partial<QuoteItem>) {
+    setCopied(false);
     setItems((prev) =>
       (prev ?? []).map((item) => {
         if (item.id !== id) return item;
@@ -131,8 +135,21 @@ function NewQuote() {
     );
   }
 
-  async function confirmAndCopy() {
-    if (!store.data || !items) return;
+  async function copyMessage() {
+    if (!message) return;
+    try {
+      await navigator.clipboard.writeText(message);
+    } catch {
+      toast.error("Não foi possível copiar. Segure na prévia para copiar.");
+      return;
+    }
+    setCopied(true);
+    toast.success("Mensagem copiada!");
+    void saveQuote();
+  }
+
+  async function saveQuote() {
+    if (!store.data || !items || saving) return;
     setSaving(true);
     try {
       const { data: quote, error } = await supabase
@@ -153,14 +170,8 @@ function NewQuote() {
         })),
       );
       if (itemsError) throw itemsError;
-
-      await navigator.clipboard.writeText(message);
-      toast.success("Mensagem copiada!");
-      void navigate({ to: "/" });
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Não foi possível salvar.",
-      );
+    } catch {
+      // salvamento silencioso: a mensagem já foi copiada
     } finally {
       setSaving(false);
     }
@@ -193,37 +204,57 @@ function NewQuote() {
         </div>
       </div>
 
+      <input
+        ref={cameraInput}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        multiple
+        className="hidden"
+        onChange={(event) => {
+          void addPhotos(event.target.files);
+          event.target.value = "";
+        }}
+      />
+      <input
+        ref={galleryInput}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={(event) => {
+          void addPhotos(event.target.files);
+          event.target.value = "";
+        }}
+      />
+
       {!items && (
         <section className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Tire uma ou mais fotos da tela do PDV. A IA lê os itens
-            automaticamente.
+            Tire fotos da tela do PDV ou escolha imagens da galeria. A IA lê os
+            itens automaticamente.
           </p>
-
-          <input
-            ref={fileInput}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            multiple
-            className="hidden"
-            onChange={(event) => {
-              void addPhotos(event.target.files);
-              event.target.value = "";
-            }}
-          />
 
           <button
             type="button"
-            onClick={() => fileInput.current?.click()}
+            onClick={() => cameraInput.current?.click()}
             className="flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border bg-surface py-12 shadow-card transition active:scale-[0.98]"
           >
             <span className="text-3xl">📷</span>
-            <span className="font-semibold text-primary">Adicionar foto</span>
+            <span className="font-semibold text-primary">Tirar foto</span>
             <span className="text-xs text-muted-foreground">
-              Até 6 fotos por orçamento
+              Você pode adicionar várias fotos
             </span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => galleryInput.current?.click()}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-surface py-4 font-semibold text-primary shadow-card transition active:scale-[0.98]"
+          >
+            🖼️ Escolher da galeria
+          </button>
+
 
           {photos.length > 0 && (
             <div className="grid grid-cols-3 gap-3">
@@ -334,7 +365,8 @@ function NewQuote() {
 
             <button
               type="button"
-              onClick={() =>
+              onClick={() => {
+                setCopied(false);
                 setItems((prev) => [
                   ...(prev ?? []),
                   {
@@ -344,12 +376,36 @@ function NewQuote() {
                     unitPrice: 0,
                     totalPrice: 0,
                   },
-                ])
-              }
+                ]);
+              }}
               className="w-full rounded-2xl border border-dashed border-border py-3 text-sm font-semibold text-primary"
             >
               + Adicionar item
             </button>
+
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => cameraInput.current?.click()}
+                className="rounded-2xl bg-surface py-3 text-sm font-semibold text-primary shadow-card disabled:opacity-40"
+              >
+                📷 Mais fotos
+              </button>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => galleryInput.current?.click()}
+                className="rounded-2xl bg-surface py-3 text-sm font-semibold text-primary shadow-card disabled:opacity-40"
+              >
+                🖼️ Galeria
+              </button>
+            </div>
+            {loading && (
+              <p className="text-center text-xs text-muted-foreground">
+                Lendo as novas fotos…
+              </p>
+            )}
           </div>
 
           <div>
@@ -357,7 +413,7 @@ function NewQuote() {
               Prévia da mensagem
             </h2>
             <div className="rounded-2xl bg-bubble px-4 py-3 shadow-card">
-              <pre className="font-sans text-[13px] leading-relaxed whitespace-pre-wrap text-bubble-foreground">
+              <pre className="font-sans text-[13px] leading-relaxed whitespace-pre-wrap text-bubble-foreground select-all">
                 {message}
               </pre>
             </div>
@@ -378,16 +434,17 @@ function NewQuote() {
         ) : (
           <button
             type="button"
-            disabled={saving || !items.length}
-            onClick={() => void confirmAndCopy()}
+            disabled={!items.length}
+            onClick={() => void copyMessage()}
             className="w-full rounded-2xl bg-primary py-4 text-base font-semibold text-primary-foreground shadow-raised transition active:scale-[0.98] disabled:opacity-40"
           >
-            {saving
-              ? "Salvando…"
+            {copied
+              ? "✓ Copiado — pode continuar editando"
               : `Copiar mensagem · R$ ${formatBRL(total)}`}
           </button>
         )}
       </div>
+
     </main>
   );
 }
