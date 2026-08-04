@@ -57,6 +57,7 @@ function NewQuote() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [orderNumber] = useState(() => Math.floor(1000 + Math.random() * 9000).toString());
 
   const store = useQuery({
     queryKey: ["store", loja],
@@ -106,9 +107,10 @@ function NewQuote() {
             pixKey: store.data.pix_key ?? "",
             items,
             total,
+            orderNumber,
           })
         : "",
-    [store.data, items, total],
+    [store.data, items, total, orderNumber],
   );
 
   async function addPhotos(files: FileList | null) {
