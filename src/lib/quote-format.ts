@@ -31,6 +31,7 @@ export function buildMessage(params: {
   pixKey: string;
   items: QuoteItem[];
   total: number;
+  orderNumber?: string;
 }): string {
   const blocks = params.items
     .map(
@@ -46,8 +47,16 @@ Pix: ${params.pixKey.trim()}
 `
     : "";
 
-  return `🛍️ *${params.storeName}*
+  const orderHeader = params.orderNumber 
+    ? `🆔 *PEDIDO #${params.orderNumber}*\n\n`
+    : "";
 
+  const orderFooter = params.orderNumber
+    ? `\n━━━━━━━━━━━━━━\n📢 *INFORMAÇÃO IMPORTANTE*\n\nNa hora da retirada, informe o número do pedido acima:\n📍 *PEDIDO #${params.orderNumber}*\n\n(A retirada é feita pelo número, não pelo nome.)\n━━━━━━━━━━━━━━\n\n`
+    : "";
+
+  return `🛍️ *${params.storeName}*
+${orderHeader}
 Segue o orçamento solicitado:
 
 📦 Itens
@@ -58,7 +67,7 @@ ${blocks}
 💰 *Total: R$ ${formatBRL(params.total)}*
 ━━━━━━━━━━━━━━
 
-${pix}Após a confirmação do pagamento, iniciaremos a separação do pedido.
+${orderFooter}${pix}Após a confirmação do pagamento, iniciaremos a separação do pedido.
 
 Agradecemos a preferência! 😊`;
 }
