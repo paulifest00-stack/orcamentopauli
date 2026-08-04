@@ -117,7 +117,7 @@ function Home() {
   );
 }
 
-function QuoteListItem({ quote, storeId }: { quote: any, storeId?: string }) {
+function QuoteListItem({ quote, storeId }: { quote: any; storeId: string | undefined }) {
   const [expanded, setExpanded] = useState(false);
   const qc = useQueryClient();
   const [deleting, setDeleting] = useState(false);
