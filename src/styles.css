@@ -5,8 +5,9 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Design system: iOS-like, minimal.
- * Base: white / #F5F5F7 surfaces, #1D1D1F text, #6C5CE7 accent.
+ * Design system: Apple iOS 17 / 18 Native Aesthetic.
+ * Base: SF Pro System Font, iOS Light (#F2F2F7) / Dark (#000000) surfaces,
+ * iOS System Blue (#007AFF), System Green (#34C759), System Purple (#AF52DE).
  */
 
 @theme inline {
@@ -38,50 +39,90 @@
   --color-surface: var(--surface);
   --color-bubble: var(--bubble);
   --color-bubble-foreground: var(--bubble-foreground);
-  --color-ring-offset-background: var(--background);
   --font-sans: var(--font-system);
   --shadow-card: var(--shadow-card);
   --shadow-raised: var(--shadow-raised);
 }
 
 :root {
-  --radius: 0.875rem;
+  --radius: 1rem;
   --font-system:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
-    system-ui, "Segoe UI", Roboto, sans-serif;
+    "SF Pro", system-ui, "Segoe UI", Roboto, sans-serif;
 
-  --background: oklch(0.9672 0.0013 286.38);
-  --foreground: oklch(0.2224 0.0022 286.05);
-  --surface: oklch(1 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2224 0.0022 286.05);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2224 0.0022 286.05);
+  /* iOS Custom Easings (Apple & Emil Kowalski Specification) */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 
-  --primary: oklch(0.5563 0.2258 285.5);
-  --primary-foreground: oklch(1 0 0);
+  /* iOS Colors */
+  --background: #F2F2F7;
+  --foreground: #1C1C1E;
+  --surface: #FFFFFF;
+  --card: #FFFFFF;
+  --card-foreground: #1C1C1E;
+  --popover: #FFFFFF;
+  --popover-foreground: #1C1C1E;
 
-  --secondary: oklch(0.9672 0.0013 286.38);
-  --secondary-foreground: oklch(0.2224 0.0022 286.05);
+  --primary: #007AFF;
+  --primary-foreground: #FFFFFF;
 
-  --muted: oklch(0.9672 0.0013 286.38);
-  --muted-foreground: oklch(0.556 0.008 286.05);
+  --secondary: #E5E5EA;
+  --secondary-foreground: #1C1C1E;
 
-  --accent: oklch(0.9481 0.0246 285.5);
-  --accent-foreground: oklch(0.5563 0.2258 285.5);
+  --muted: #EFEFF4;
+  --muted-foreground: #8E8E93;
 
-  --destructive: oklch(0.5866 0.2137 25.9);
-  --destructive-foreground: oklch(1 0 0);
+  --accent: #E5F0FF;
+  --accent-foreground: #007AFF;
 
-  --border: oklch(0.9107 0.0025 286.05);
-  --input: oklch(0.9107 0.0025 286.05);
-  --ring: oklch(0.5563 0.2258 285.5);
+  --destructive: #FF3B30;
+  --destructive-foreground: #FFFFFF;
 
-  --bubble: oklch(0.9418 0.0552 148.5);
-  --bubble-foreground: oklch(0.2224 0.0022 286.05);
+  --border: rgba(60, 60, 67, 0.12);
+  --input: rgba(118, 118, 128, 0.12);
+  --ring: #007AFF;
 
-  --shadow-card: 0 1px 2px oklch(0.2224 0.0022 286.05 / 6%);
-  --shadow-raised: 0 8px 24px oklch(0.5563 0.2258 285.5 / 22%);
+  --bubble: #DCF8C6;
+  --bubble-foreground: #111111;
+
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05), 0 4px 12px rgba(0, 0, 0, 0.03);
+  --shadow-raised: 0 8px 24px rgba(0, 122, 255, 0.25), 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.dark {
+  --background: #000000;
+  --foreground: #F2F2F7;
+  --surface: #1C1C1E;
+  --card: #1C1C1E;
+  --card-foreground: #F2F2F7;
+  --popover: #1C1C1E;
+  --popover-foreground: #F2F2F7;
+
+  --primary: #0A84FF;
+  --primary-foreground: #FFFFFF;
+
+  --secondary: #2C2C2E;
+  --secondary-foreground: #F2F2F7;
+
+  --muted: #2C2C2E;
+  --muted-foreground: #8E8E93;
+
+  --accent: #0A2540;
+  --accent-foreground: #0A84FF;
+
+  --destructive: #FF453A;
+  --destructive-foreground: #FFFFFF;
+
+  --border: rgba(84, 84, 88, 0.36);
+  --input: rgba(118, 118, 128, 0.24);
+  --ring: #0A84FF;
+
+  --bubble: #054740;
+  --bubble-foreground: #E9EDEF;
+
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-raised: 0 8px 24px rgba(10, 132, 255, 0.35);
 }
 
 @layer base {
@@ -91,6 +132,7 @@
 
   html {
     -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
   }
 
   body {
@@ -98,8 +140,15 @@
     color: var(--color-foreground);
     font-family: var(--font-system);
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     letter-spacing: -0.01em;
     overscroll-behavior-y: none;
+  }
+
+  /* iOS Display Typography rules */
+  h1, h2, h3 {
+    letter-spacing: -0.025em;
+    line-height: 1.15;
   }
 
   input,
@@ -110,11 +159,95 @@
   }
 }
 
+/* iOS Tactile Press Effect */
+.ios-press {
+  transition: transform 160ms var(--ease-out), opacity 160ms var(--ease-out), background-color 160ms var(--ease-out);
+}
+.ios-press:active {
+  transform: scale(0.97);
+}
+
+/* iOS Translucent Frosted Glass Materials */
+.glass-header {
+  background: rgba(242, 242, 247, 0.78);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid var(--border);
+}
+
+.dark .glass-header {
+  background: rgba(0, 0, 0, 0.78);
+}
+
+.glass-footer {
+  background: rgba(242, 242, 247, 0.82);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-top: 1px solid var(--border);
+}
+
+.dark .glass-footer {
+  background: rgba(0, 0, 0, 0.82);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.dark .glass-card {
+  background: rgba(28, 28, 30, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* iOS Stagger Animations */
+@keyframes iosFadeScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.ios-animate-in {
+  animation: iosFadeScaleIn 260ms var(--ease-out) forwards;
+}
+
+.ios-stagger-1 { animation-delay: 40ms; }
+.ios-stagger-2 { animation-delay: 80ms; }
+.ios-stagger-3 { animation-delay: 120ms; }
+.ios-stagger-4 { animation-delay: 160ms; }
+
+/* Safe Area Utility */
 @utility safe-bottom {
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
 }
 
-/* Hide the "Made with Lovable" badge injected by the platform preview. */
+/* Hover Gate for Fine Pointer Devices */
+@media (hover: hover) and (pointer: fine) {
+  .ios-hover-lift:hover {
+    transform: translateY(-1px);
+    transition: transform 200ms var(--ease-out);
+  }
+}
+
+/* Reduced Motion Override */
+@media (prefers-reduced-motion: reduce) {
+  .ios-press,
+  .ios-animate-in,
+  .ios-hover-lift {
+    transition: opacity 150ms ease !important;
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+/* Hide Lovable Badges */
 iframe[src*="lovable.app/badge"],
 a[href*="lovable.app"][target="_blank"][rel*="noopener"],
 [data-lovable-badge],

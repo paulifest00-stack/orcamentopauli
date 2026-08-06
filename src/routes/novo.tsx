@@ -12,6 +12,20 @@ import {
   quoteTotal,
   type QuoteItem,
 } from "@/lib/quote-format";
+import { IOSStepper } from "@/components/ui/ios-stepper";
+import {
+  ChevronLeft,
+  Camera,
+  Image as ImageIcon,
+  Sparkles,
+  Copy,
+  Check,
+  Plus,
+  Trash2,
+  X,
+  MessageSquare,
+  RefreshCw,
+} from "lucide-react";
 
 export const Route = createFileRoute("/novo")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -139,6 +153,7 @@ function NewQuote() {
       }));
       setItems((prev) => (append && prev ? [...prev, ...mapped] : mapped));
       setCopied(false);
+      toast.success(`${mapped.length} ${mapped.length === 1 ? 'item identificado' : 'itens identificados'} pela IA!`);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Não foi possível ler as fotos.",
@@ -171,7 +186,7 @@ function NewQuote() {
       return;
     }
     setCopied(true);
-    toast.success("Mensagem copiada!");
+    toast.success("Mensagem copiada para o WhatsApp!");
     void saveQuote();
   }
 
@@ -209,7 +224,7 @@ function NewQuote() {
       );
       if (itemsError) throw itemsError;
     } catch {
-      // salvamento silencioso: a mensagem já foi copiada
+      // salvamento silencioso
     } finally {
       setSaving(false);
     }
@@ -217,31 +232,47 @@ function NewQuote() {
 
   if (!loja || (store.isFetched && !store.data)) {
     return (
-      <main className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center gap-4 px-5">
-        <p className="text-muted-foreground">Loja não encontrada.</p>
-        <Link to="/" className="font-semibold text-primary">
-          Voltar
-        </Link>
-      </main>
+      <div className="min-h-screen bg-[#F2F2F7] dark:bg-black flex items-center justify-center p-5">
+        <div className="text-center space-y-4 rounded-3xl bg-white dark:bg-zinc-900 p-8 shadow-xs border border-black/5 dark:border-white/10 max-w-sm">
+          <p className="text-sm text-muted-foreground">Loja não encontrada.</p>
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 rounded-full bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground ios-press active:scale-[0.95]"
+          >
+            Voltar ao Início
+          </Link>
+        </div>
+      </div>
     );
   }
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-md px-5 pt-12 pb-40">
-      <div className="mb-6 flex items-center gap-3">
-        <Link to="/" className="text-2xl leading-none text-primary">
-          ‹
-        </Link>
-        <div>
-          <p className="text-xs font-medium text-muted-foreground">
-            {store.data?.name ?? "Carregando…"}
-          </p>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {items ? "Revisar orçamento" : "Novo orçamento"}
-          </h1>
-        </div>
-      </div>
+    <div className="min-h-screen bg-[#F2F2F7] dark:bg-black text-foreground antialiased selection:bg-primary/20 pb-36">
+      {/* Sticky iOS Top Header */}
+      <header className="sticky top-0 z-30 glass-header px-4 py-3">
+        <div className="mx-auto flex max-w-md items-center justify-between">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1 text-xs font-semibold text-primary ios-press active:scale-[0.95]"
+          >
+            <ChevronLeft className="h-5 w-5 stroke-[2.5]" />
+            <span>Voltar</span>
+          </Link>
 
+          <div className="text-center">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {store.data?.name ?? "Carregando…"}
+            </p>
+            <h1 className="text-sm font-bold tracking-tight text-foreground">
+              {items ? "Revisar Orçamento" : "Novo Orçamento"}
+            </h1>
+          </div>
+
+          <div className="w-12" /> {/* Layout balancer */}
+        </div>
+      </header>
+
+      {/* Hidden inputs */}
       <input
         ref={cameraInput}
         type="file"
@@ -266,223 +297,296 @@ function NewQuote() {
         }}
       />
 
-      {!items && (
-        <section className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Tire fotos da tela do PDV ou escolha imagens da galeria. A IA lê os
-            itens automaticamente.
-          </p>
+      <main className="mx-auto max-w-md px-4 pt-4 space-y-6">
+        {/* Step 1: Upload Photos */}
+        {!items && (
+          <section className="ios-animate-in space-y-4">
+            <div className="rounded-3xl bg-white dark:bg-zinc-900 p-5 shadow-xs border border-black/5 dark:border-white/10 space-y-1.5">
+              <h2 className="text-sm font-semibold text-foreground tracking-tight flex items-center gap-1.5">
+                Fotos da Tela do PDV <Sparkles className="h-4 w-4 text-amber-500 fill-amber-500/20" />
+              </h2>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Tire fotos da tela do computador ou caixa registradora. A Inteligência Artificial vai ler os produtos e preços.
+              </p>
+            </div>
 
-          <button
-            type="button"
-            onClick={() => cameraInput.current?.click()}
-            className="flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border bg-surface py-12 shadow-card transition active:scale-[0.98]"
-          >
-            <span className="text-3xl">📷</span>
-            <span className="font-semibold text-primary">Tirar foto</span>
-            <span className="text-xs text-muted-foreground">
-              Você pode adicionar várias fotos
-            </span>
-          </button>
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => cameraInput.current?.click()}
+                className="flex flex-col items-center justify-center gap-2 rounded-3xl bg-white dark:bg-zinc-900 p-6 text-center shadow-xs border border-black/5 dark:border-white/10 ios-press active:scale-[0.96] group"
+              >
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary group-active:bg-primary group-active:text-white transition-colors">
+                  <Camera className="h-6 w-6" />
+                </div>
+                <div>
+                  <span className="block text-sm font-bold text-foreground">Tirar Foto</span>
+                  <span className="block text-[11px] text-muted-foreground">Usar Câmera</span>
+                </div>
+              </button>
 
-          <button
-            type="button"
-            onClick={() => galleryInput.current?.click()}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-surface py-4 font-semibold text-primary shadow-card transition active:scale-[0.98]"
-          >
-            🖼️ Escolher da galeria
-          </button>
+              <button
+                type="button"
+                onClick={() => galleryInput.current?.click()}
+                className="flex flex-col items-center justify-center gap-2 rounded-3xl bg-white dark:bg-zinc-900 p-6 text-center shadow-xs border border-black/5 dark:border-white/10 ios-press active:scale-[0.96] group"
+              >
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 group-active:bg-purple-600 group-active:text-white transition-colors">
+                  <ImageIcon className="h-6 w-6" />
+                </div>
+                <div>
+                  <span className="block text-sm font-bold text-foreground">Galeria</span>
+                  <span className="block text-[11px] text-muted-foreground">Escolher Fotos</span>
+                </div>
+              </button>
+            </div>
 
+            {/* Uploaded Photos Grid */}
+            {photos.length > 0 && (
+              <div className="ios-animate-in space-y-2 pt-2">
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Fotos Selecionadas ({photos.length})
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2.5">
+                  {photos.map((photo, index) => (
+                    <div
+                      key={index}
+                      className="relative aspect-3/4 overflow-hidden rounded-2xl bg-zinc-100 dark:bg-zinc-800 shadow-xs border border-black/5 dark:border-white/10 group"
+                    >
+                      <img
+                        src={photo}
+                        alt={`Foto ${index + 1} da tela do PDV`}
+                        className="h-full w-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        aria-label="Remover foto"
+                        onClick={() =>
+                          setPhotos((prev) => prev.filter((_, i) => i !== index))
+                        }
+                        className="absolute top-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-md transition-transform active:scale-[0.88]"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
 
-          {photos.length > 0 && (
-            <div className="grid grid-cols-3 gap-3">
-              {photos.map((photo, index) => (
+        {/* Step 2: Review & Edit Items */}
+        {items && (
+          <section className="ios-animate-in space-y-5">
+            <div className="flex items-center justify-between px-1">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Itens do Orçamento ({items.length})
+              </h2>
+              <button
+                type="button"
+                onClick={() => {
+                  setCopied(false);
+                  setItems((prev) => [
+                    ...(prev ?? []),
+                    {
+                      id: `manual-${Date.now()}`,
+                      product: "",
+                      quantity: 1,
+                      unitPrice: 0,
+                      totalPrice: 0,
+                    },
+                  ]);
+                }}
+                className="inline-flex items-center gap-1 text-xs font-bold text-primary ios-press active:scale-[0.95]"
+              >
+                <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
+                <span>Adicionar Item</span>
+              </button>
+            </div>
+
+            {/* List of Edit Cards */}
+            <div className="space-y-3">
+              {items.map((item) => (
                 <div
-                  key={index}
-                  className="relative aspect-3/4 overflow-hidden rounded-xl bg-surface shadow-card"
+                  key={item.id}
+                  className="rounded-3xl bg-white dark:bg-zinc-900 p-4 shadow-xs border border-black/5 dark:border-white/10 space-y-3"
                 >
-                  <img
-                    src={photo}
-                    alt={`Foto ${index + 1} da tela do PDV`}
-                    className="h-full w-full object-cover"
-                  />
-                  <button
-                    type="button"
-                    aria-label="Remover foto"
-                    onClick={() =>
-                      setPhotos((prev) => prev.filter((_, i) => i !== index))
-                    }
-                    className="absolute top-1 right-1 grid h-6 w-6 place-items-center rounded-full bg-foreground/70 text-xs text-background"
-                  >
-                    ✕
-                  </button>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                      Produto
+                    </label>
+                    <input
+                      value={item.product}
+                      onChange={(event) =>
+                        updateItem(item.id, { product: event.target.value })
+                      }
+                      placeholder="Nome do produto..."
+                      aria-label="Produto"
+                      className="w-full rounded-2xl bg-zinc-100 dark:bg-zinc-800/80 px-3.5 py-2.5 text-sm font-semibold text-foreground outline-none focus:ring-2 focus:ring-primary/40 transition-all"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-12 gap-2.5 items-end">
+                    {/* Stepper Qtd */}
+                    <div className="col-span-5 space-y-1">
+                      <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                        Qtd
+                      </label>
+                      <IOSStepper
+                        value={item.quantity}
+                        onChange={(newQty) => updateItem(item.id, { quantity: newQty })}
+                        className="w-full justify-between"
+                      />
+                    </div>
+
+                    {/* Unit Price */}
+                    <div className="col-span-3.5 space-y-1">
+                      <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                        Unit. (R$)
+                      </label>
+                      <input
+                        inputMode="decimal"
+                        value={formatBRL(item.unitPrice)}
+                        onChange={(event) =>
+                          updateItem(item.id, {
+                            unitPrice: parseBRL(event.target.value),
+                          })
+                        }
+                        className="w-full rounded-xl bg-zinc-100 dark:bg-zinc-800/80 px-2.5 py-2 text-xs font-semibold text-foreground outline-none focus:ring-2 focus:ring-primary/40"
+                      />
+                    </div>
+
+                    {/* Total Price */}
+                    <div className="col-span-3.5 space-y-1">
+                      <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                        Total (R$)
+                      </label>
+                      <input
+                        inputMode="decimal"
+                        value={formatBRL(item.totalPrice)}
+                        onChange={(event) =>
+                          updateItem(item.id, {
+                            totalPrice: parseBRL(event.target.value),
+                          })
+                        }
+                        className="w-full rounded-xl bg-zinc-100 dark:bg-zinc-800/80 px-2.5 py-2 text-xs font-bold text-foreground outline-none focus:ring-2 focus:ring-primary/40"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-1">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setItems(
+                          (prev) => prev?.filter((entry) => entry.id !== item.id) ?? [],
+                        )
+                      }
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-destructive/90 hover:text-destructive ios-press active:scale-[0.95]"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      <span>Remover</span>
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
-          )}
-        </section>
-      )}
 
-      {items && (
-        <section className="space-y-6">
-          <div className="space-y-3">
-            {items.map((item) => (
-              <div
-                key={item.id}
-                className="space-y-3 rounded-2xl bg-surface p-4 shadow-card"
-              >
-                <input
-                  value={item.product}
-                  onChange={(event) =>
-                    updateItem(item.id, { product: event.target.value })
-                  }
-                  aria-label="Produto"
-                  className="w-full rounded-xl bg-muted px-3 py-3 text-base font-medium outline-none focus:ring-2 focus:ring-ring"
-                />
-                <div className="grid grid-cols-3 gap-2">
-                  <label className="flex flex-col gap-1">
-                    <span className="text-[11px] text-muted-foreground">Qtd</span>
-                    <input
-                      inputMode="numeric"
-                      value={item.quantity}
-                      onChange={(event) =>
-                        updateItem(item.id, {
-                          quantity: Math.max(
-                            1,
-                            Number.parseInt(event.target.value, 10) || 1,
-                          ),
-                        })
-                      }
-                      className="rounded-xl bg-muted px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-ring"
-                    />
-                  </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="text-[11px] text-muted-foreground">
-                      Unitário
-                    </span>
-                    <input
-                      inputMode="decimal"
-                      value={formatBRL(item.unitPrice)}
-                      onChange={(event) =>
-                        updateItem(item.id, {
-                          unitPrice: parseBRL(event.target.value),
-                        })
-                      }
-                      className="rounded-xl bg-muted px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-ring"
-                    />
-                  </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="text-[11px] text-muted-foreground">
-                      Total
-                    </span>
-                    <input
-                      inputMode="decimal"
-                      value={formatBRL(item.totalPrice)}
-                      onChange={(event) =>
-                        updateItem(item.id, {
-                          totalPrice: parseBRL(event.target.value),
-                        })
-                      }
-                      className="rounded-xl bg-muted px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-ring"
-                    />
-                  </label>
-                </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setItems(
-                      (prev) => prev?.filter((entry) => entry.id !== item.id) ?? [],
-                    )
-                  }
-                  className="text-xs font-medium text-destructive"
-                >
-                  Remover item
-                </button>
-              </div>
-            ))}
-
-            <button
-              type="button"
-              onClick={() => {
-                setCopied(false);
-                setItems((prev) => [
-                  ...(prev ?? []),
-                  {
-                    id: `manual-${Date.now()}`,
-                    product: "",
-                    quantity: 1,
-                    unitPrice: 0,
-                    totalPrice: 0,
-                  },
-                ]);
-              }}
-              className="w-full rounded-2xl border border-dashed border-border py-3 text-sm font-semibold text-primary"
-            >
-              + Adicionar item
-            </button>
-
-            <div className="grid grid-cols-2 gap-3">
+            {/* Quick Add More Photos Row */}
+            <div className="grid grid-cols-2 gap-2.5">
               <button
                 type="button"
                 disabled={loading}
                 onClick={() => cameraInput.current?.click()}
-                className="rounded-2xl bg-surface py-3 text-sm font-semibold text-primary shadow-card disabled:opacity-40"
+                className="inline-flex items-center justify-center gap-1.5 rounded-2xl bg-white dark:bg-zinc-900 py-3 px-4 text-xs font-bold text-primary shadow-xs border border-black/5 dark:border-white/10 ios-press active:scale-[0.96] disabled:opacity-40"
               >
-                📷 Mais fotos
+                <Camera className="h-4 w-4" />
+                <span>+ Fotos Câmera</span>
               </button>
               <button
                 type="button"
                 disabled={loading}
                 onClick={() => galleryInput.current?.click()}
-                className="rounded-2xl bg-surface py-3 text-sm font-semibold text-primary shadow-card disabled:opacity-40"
+                className="inline-flex items-center justify-center gap-1.5 rounded-2xl bg-white dark:bg-zinc-900 py-3 px-4 text-xs font-bold text-primary shadow-xs border border-black/5 dark:border-white/10 ios-press active:scale-[0.96] disabled:opacity-40"
               >
-                🖼️ Galeria
+                <ImageIcon className="h-4 w-4" />
+                <span>+ Fotos Galeria</span>
               </button>
             </div>
+
             {loading && (
-              <p className="text-center text-xs text-muted-foreground">
-                Lendo as novas fotos…
-              </p>
+              <div className="flex items-center justify-center gap-2 text-xs font-medium text-muted-foreground py-2">
+                <RefreshCw className="h-3.5 w-3.5 animate-spin text-primary" />
+                <span>Processando fotos com a IA…</span>
+              </div>
             )}
-          </div>
 
-          <div>
-            <h2 className="mb-2 text-sm font-semibold text-muted-foreground">
-              Prévia da mensagem
-            </h2>
-            <div className="rounded-2xl bg-bubble px-4 py-3 shadow-card">
-              <pre className="font-sans text-[13px] leading-relaxed whitespace-pre-wrap text-bubble-foreground select-all">
-                {message}
-              </pre>
+            {/* WhatsApp Message Chat Bubble Preview */}
+            <div className="space-y-2 pt-2">
+              <div className="flex items-center justify-between px-1">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <MessageSquare className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Prévia da Mensagem (WhatsApp)</span>
+                </h2>
+              </div>
+
+              <div className="rounded-3xl bg-[#DCF8C6] dark:bg-[#054740] p-4.5 shadow-xs border border-emerald-500/20 text-[#111111] dark:text-[#E9EDEF]">
+                <pre className="font-sans text-[13px] leading-relaxed whitespace-pre-wrap select-all font-medium">
+                  {message}
+                </pre>
+              </div>
             </div>
-          </div>
-        </section>
-      )}
+          </section>
+        )}
+      </main>
 
-      <div className="fixed inset-x-0 bottom-0 mx-auto w-full max-w-md safe-bottom bg-linear-to-t from-background via-background to-transparent px-5 pt-6">
+      {/* Fixed Sticky Glass Bottom CTA Bar */}
+      <div className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md safe-bottom glass-footer px-5 pt-3.5 pb-5">
         {!items ? (
           <button
             type="button"
             disabled={!photos.length || loading}
             onClick={() => void analyse()}
-            className="w-full rounded-2xl bg-primary py-4 text-base font-semibold text-primary-foreground shadow-raised transition active:scale-[0.98] disabled:opacity-40 disabled:shadow-none"
+            className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-base font-semibold text-primary-foreground shadow-raised ios-press active:scale-[0.97] disabled:opacity-40 disabled:shadow-none"
           >
-            {loading ? "Lendo as fotos…" : "Ler com IA"}
+            {loading ? (
+              <>
+                <RefreshCw className="h-5 w-5 animate-spin" />
+                <span>Lendo as fotos…</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-5 w-5" />
+                <span>Ler com IA ({photos.length} {photos.length === 1 ? 'foto' : 'fotos'})</span>
+              </>
+            )}
           </button>
         ) : (
           <button
             type="button"
             disabled={!items.length}
             onClick={() => void copyMessage()}
-            className="w-full rounded-2xl bg-primary py-4 text-base font-semibold text-primary-foreground shadow-raised transition active:scale-[0.98] disabled:opacity-40"
+            className={`flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-base font-semibold text-primary-foreground shadow-raised ios-press active:scale-[0.97] disabled:opacity-40 transition-colors ${
+              copied ? "bg-emerald-600" : "bg-primary"
+            }`}
           >
-            {copied
-              ? "✓ Copiado — pode continuar editando"
-              : `Copiar mensagem · R$ ${formatBRL(total)}`}
+            {copied ? (
+              <>
+                <Check className="h-5 w-5 stroke-[2.5]" />
+                <span>Copiado para o WhatsApp</span>
+              </>
+            ) : (
+              <>
+                <Copy className="h-5 w-5" />
+                <span>Copiar Mensagem · R$ {formatBRL(total)}</span>
+              </>
+            )}
           </button>
         )}
       </div>
-
-    </main>
+    </div>
   );
 }
