@@ -51,6 +51,15 @@ export const Route = createFileRoute("/novo")({
   component: NewQuote,
 });
 
+function itemKey(item: { product: string; unitPrice: number }): string {
+  return `${item.product
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim()}|${item.unitPrice.toFixed(2)}`;
+}
+
 function readFile(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
