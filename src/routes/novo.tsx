@@ -139,21 +139,50 @@ function NewQuote() {
     if (!target.length) return;
     setLoading(true);
     try {
-      const result = await runExtract({ data: { images: target.slice(0, 6) } });
-      if (!result.items.length) {
-        toast.error("Nenhum item encontrado nas fotos.");
+      const previous = append ? (items ?? []) : [];
+      const result = await runExtract({
+        data: {
+          images: target.slice(0, 6),
+          ...(previous.length
+            ? {
+                existing: previous.map((item) => ({
+                  product: item.product,
+                  quantity: item.quantity,
+                  unitPrice: item.unitPrice,
+                })),
+              }
+            : {}),
+        },
+      });
+
+      const seen = new Set(previous.map(itemKey));
+      const mapped: QuoteItem[] = [];
+      result.items.forEach((item, index) => {
+        const candidate = {
+          id: `${Date.now()}-${index}-${item.product}`,
+          product: item.product,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          totalPrice: item.totalPrice,
+        };
+        const key = itemKey(candidate);
+        if (seen.has(key)) return;
+        seen.add(key);
+        mapped.push(candidate);
+      });
+
+      if (!mapped.length) {
+        toast(
+          previous.length
+            ? "Nenhum item novo nessa foto — os produtos já estavam na lista."
+            : "Nenhum item encontrado nas fotos.",
+        );
         return;
       }
-      const mapped = result.items.map((item, index) => ({
-        id: `${Date.now()}-${index}-${item.product}`,
-        product: item.product,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        totalPrice: item.totalPrice,
-      }));
-      setItems((prev) => (append && prev ? [...prev, ...mapped] : mapped));
+      setItems(append && items ? [...items, ...mapped] : mapped);
       setCopied(false);
       toast.success(`${mapped.length} ${mapped.length === 1 ? 'item identificado' : 'itens identificados'} pela IA!`);
+
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Não foi possível ler as fotos.",
