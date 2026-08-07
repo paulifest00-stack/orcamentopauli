@@ -16,8 +16,11 @@ const SYSTEM_PROMPT = `Você lê capturas de tela de sistemas de PDV (ponto de v
 Extraia TODOS os itens do pedido visíveis nas imagens.
 Para cada item devolva: product (nome do produto), quantity (inteiro), unitPrice (valor unitário em número), totalPrice (valor total da linha em número).
 Também devolva total: o valor total da venda.
-Use ponto como separador decimal. Nunca invente itens. Se houver várias imagens, junte todos os itens sem duplicar.
+Use ponto como separador decimal. Nunca invente itens.
+IMPORTANTE SOBRE DUPLICATAS: várias fotos podem mostrar a MESMA lista rolada em posições diferentes. Junte tudo em uma única lista, sem repetir itens. Se o mesmo produto (mesmo nome, mesmo valor unitário) aparecer em mais de uma imagem, ele é o MESMO item — inclua uma única vez, sem somar quantidades.
+Se for enviada uma lista de itens já registrados, devolva SOMENTE os itens realmente NOVOS que não estão nessa lista (compare por nome do produto e valor unitário, ignorando maiúsculas/minúsculas e acentos). Se não houver nenhum item novo, devolva items vazio.
 Responda SOMENTE com JSON no formato: {"items":[{"product":"","quantity":1,"unitPrice":0,"totalPrice":0}],"total":0}`;
+
 
 function toNumber(value: unknown): number {
   if (typeof value === "number" && Number.isFinite(value)) return value;
