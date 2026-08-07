@@ -37,6 +37,7 @@ function toNumber(value: unknown): number {
 
 export async function extractQuoteFromImages(
   images: string[],
+  existing?: Array<{ product: string; quantity: number; unitPrice: number }>,
 ): Promise<ExtractedQuote> {
   const apiKey = process.env["LOVABLE_API_KEY"];
   if (!apiKey) {
@@ -44,6 +45,15 @@ export async function extractQuoteFromImages(
       "A IA de leitura de imagem não está configurada neste projeto.",
     );
   }
+
+  const existingText = existing?.length
+    ? `\n\nItens JÁ registrados (NÃO repita nenhum destes; devolva apenas os itens novos):\n${existing
+        .map(
+          (item) =>
+            `- ${item.product} | qtd ${item.quantity} | unit ${item.unitPrice}`,
+        )
+        .join("\n")}`
+    : "";
 
   const response = await fetch(GATEWAY_URL, {
     method: "POST",
@@ -60,8 +70,9 @@ export async function extractQuoteFromImages(
           content: [
             {
               type: "text",
-              text: "Extraia os itens e o total desta(s) tela(s) do PDV.",
+              text: `Extraia os itens e o total desta(s) tela(s) do PDV.${existingText}`,
             },
+
             ...images.map((url) => ({
               type: "image_url" as const,
               image_url: { url },
