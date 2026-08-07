@@ -429,9 +429,9 @@ function NewQuote() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-12 gap-2.5 items-end">
+                  <div className="space-y-3">
                     {/* Stepper Qtd */}
-                    <div className="col-span-5 space-y-1">
+                    <div className="space-y-1">
                       <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                         Qtd
                       </label>
@@ -442,40 +442,45 @@ function NewQuote() {
                       />
                     </div>
 
-                    {/* Unit Price */}
-                    <div className="col-span-3.5 space-y-1">
-                      <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                        Unit. (R$)
-                      </label>
-                      <input
-                        inputMode="decimal"
-                        value={formatBRL(item.unitPrice)}
-                        onChange={(event) =>
-                          updateItem(item.id, {
-                            unitPrice: parseBRL(event.target.value),
-                          })
-                        }
-                        className="w-full rounded-xl bg-zinc-100 dark:bg-zinc-800/80 px-2.5 py-2 text-xs font-semibold text-foreground outline-none focus:ring-2 focus:ring-primary/40"
-                      />
-                    </div>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      {/* Unit Price */}
+                      <div className="min-w-0 space-y-1">
+                        <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                          Unit. (R$)
+                        </label>
+                        <input
+                          inputMode="decimal"
+                          value={formatBRL(item.unitPrice)}
+                          onChange={(event) =>
+                            updateItem(item.id, {
+                              unitPrice: parseBRL(event.target.value),
+                            })
+                          }
+                          aria-label="Valor unitário"
+                          className="w-full min-w-0 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 px-3 py-2.5 text-base font-semibold tabular-nums text-foreground outline-none focus:ring-2 focus:ring-primary/40"
+                        />
+                      </div>
 
-                    {/* Total Price */}
-                    <div className="col-span-3.5 space-y-1">
-                      <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                        Total (R$)
-                      </label>
-                      <input
-                        inputMode="decimal"
-                        value={formatBRL(item.totalPrice)}
-                        onChange={(event) =>
-                          updateItem(item.id, {
-                            totalPrice: parseBRL(event.target.value),
-                          })
-                        }
-                        className="w-full rounded-xl bg-zinc-100 dark:bg-zinc-800/80 px-2.5 py-2 text-xs font-bold text-foreground outline-none focus:ring-2 focus:ring-primary/40"
-                      />
+                      {/* Total Price */}
+                      <div className="min-w-0 space-y-1">
+                        <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                          Total (R$)
+                        </label>
+                        <input
+                          inputMode="decimal"
+                          value={formatBRL(item.totalPrice)}
+                          onChange={(event) =>
+                            updateItem(item.id, {
+                              totalPrice: parseBRL(event.target.value),
+                            })
+                          }
+                          aria-label="Valor total"
+                          className="w-full min-w-0 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 px-3 py-2.5 text-base font-bold tabular-nums text-foreground outline-none focus:ring-2 focus:ring-primary/40"
+                        />
+                      </div>
                     </div>
                   </div>
+
 
                   <div className="flex justify-end pt-1">
                     <button
