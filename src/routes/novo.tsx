@@ -51,6 +51,15 @@ export const Route = createFileRoute("/novo")({
   component: NewQuote,
 });
 
+function itemKey(item: { product: string; unitPrice: number }): string {
+  return `${item.product
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim()}|${item.unitPrice.toFixed(2)}`;
+}
+
 function readFile(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -94,7 +103,7 @@ function NewQuote() {
       const { data, error } = await supabase
         .from("quotes")
         .select("id, quote_items(id, product, quantity, unit_price, total_price)")
-        .eq("id", id)
+        .eq("id", id ?? "")
         .maybeSingle();
       if (error) throw error;
       if (data?.quote_items) {
@@ -139,21 +148,50 @@ function NewQuote() {
     if (!target.length) return;
     setLoading(true);
     try {
-      const result = await runExtract({ data: { images: target.slice(0, 6) } });
-      if (!result.items.length) {
-        toast.error("Nenhum item encontrado nas fotos.");
+      const previous = append ? (items ?? []) : [];
+      const result = await runExtract({
+        data: {
+          images: target.slice(0, 6),
+          ...(previous.length
+            ? {
+                existing: previous.map((item) => ({
+                  product: item.product,
+                  quantity: item.quantity,
+                  unitPrice: item.unitPrice,
+                })),
+              }
+            : {}),
+        },
+      });
+
+      const seen = new Set(previous.map(itemKey));
+      const mapped: QuoteItem[] = [];
+      result.items.forEach((item, index) => {
+        const candidate = {
+          id: `${Date.now()}-${index}-${item.product}`,
+          product: item.product,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          totalPrice: item.totalPrice,
+        };
+        const key = itemKey(candidate);
+        if (seen.has(key)) return;
+        seen.add(key);
+        mapped.push(candidate);
+      });
+
+      if (!mapped.length) {
+        toast(
+          previous.length
+            ? "Nenhum item novo nessa foto — os produtos já estavam na lista."
+            : "Nenhum item encontrado nas fotos.",
+        );
         return;
       }
-      const mapped = result.items.map((item, index) => ({
-        id: `${Date.now()}-${index}-${item.product}`,
-        product: item.product,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        totalPrice: item.totalPrice,
-      }));
-      setItems((prev) => (append && prev ? [...prev, ...mapped] : mapped));
+      setItems(append && items ? [...items, ...mapped] : mapped);
       setCopied(false);
       toast.success(`${mapped.length} ${mapped.length === 1 ? 'item identificado' : 'itens identificados'} pela IA!`);
+
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Não foi possível ler as fotos.",
@@ -214,7 +252,7 @@ function NewQuote() {
 
       const { error: itemsError } = await supabase.from("quote_items").insert(
         items.map((item, index) => ({
-          quote_id: quoteId,
+          quote_id: quoteId as string,
           product: item.product,
           quantity: item.quantity,
           unit_price: item.unitPrice,
@@ -429,9 +467,9 @@ function NewQuote() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-12 gap-2.5 items-end">
+                  <div className="space-y-3">
                     {/* Stepper Qtd */}
-                    <div className="col-span-5 space-y-1">
+                    <div className="space-y-1">
                       <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                         Qtd
                       </label>
@@ -442,40 +480,45 @@ function NewQuote() {
                       />
                     </div>
 
-                    {/* Unit Price */}
-                    <div className="col-span-3.5 space-y-1">
-                      <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                        Unit. (R$)
-                      </label>
-                      <input
-                        inputMode="decimal"
-                        value={formatBRL(item.unitPrice)}
-                        onChange={(event) =>
-                          updateItem(item.id, {
-                            unitPrice: parseBRL(event.target.value),
-                          })
-                        }
-                        className="w-full rounded-xl bg-zinc-100 dark:bg-zinc-800/80 px-2.5 py-2 text-xs font-semibold text-foreground outline-none focus:ring-2 focus:ring-primary/40"
-                      />
-                    </div>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      {/* Unit Price */}
+                      <div className="min-w-0 space-y-1">
+                        <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                          Unit. (R$)
+                        </label>
+                        <input
+                          inputMode="decimal"
+                          value={formatBRL(item.unitPrice)}
+                          onChange={(event) =>
+                            updateItem(item.id, {
+                              unitPrice: parseBRL(event.target.value),
+                            })
+                          }
+                          aria-label="Valor unitário"
+                          className="w-full min-w-0 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 px-3 py-2.5 text-base font-semibold tabular-nums text-foreground outline-none focus:ring-2 focus:ring-primary/40"
+                        />
+                      </div>
 
-                    {/* Total Price */}
-                    <div className="col-span-3.5 space-y-1">
-                      <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                        Total (R$)
-                      </label>
-                      <input
-                        inputMode="decimal"
-                        value={formatBRL(item.totalPrice)}
-                        onChange={(event) =>
-                          updateItem(item.id, {
-                            totalPrice: parseBRL(event.target.value),
-                          })
-                        }
-                        className="w-full rounded-xl bg-zinc-100 dark:bg-zinc-800/80 px-2.5 py-2 text-xs font-bold text-foreground outline-none focus:ring-2 focus:ring-primary/40"
-                      />
+                      {/* Total Price */}
+                      <div className="min-w-0 space-y-1">
+                        <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                          Total (R$)
+                        </label>
+                        <input
+                          inputMode="decimal"
+                          value={formatBRL(item.totalPrice)}
+                          onChange={(event) =>
+                            updateItem(item.id, {
+                              totalPrice: parseBRL(event.target.value),
+                            })
+                          }
+                          aria-label="Valor total"
+                          className="w-full min-w-0 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 px-3 py-2.5 text-base font-bold tabular-nums text-foreground outline-none focus:ring-2 focus:ring-primary/40"
+                        />
+                      </div>
                     </div>
                   </div>
+
 
                   <div className="flex justify-end pt-1">
                     <button

@@ -176,7 +176,7 @@ function Home() {
       <div className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md safe-bottom glass-footer px-5 pt-3.5 pb-5">
         <Link
           to="/novo"
-          search={{ loja: store.data?.id ?? "" }}
+          search={{ loja: store.data?.id ?? "", id: undefined }}
           disabled={!store.data}
           className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-base font-semibold text-primary-foreground shadow-raised ios-press active:scale-[0.97] aria-disabled:opacity-50"
         >
