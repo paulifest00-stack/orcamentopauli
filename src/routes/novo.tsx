@@ -94,7 +94,7 @@ function NewQuote() {
       const { data, error } = await supabase
         .from("quotes")
         .select("id, quote_items(id, product, quantity, unit_price, total_price)")
-        .eq("id", id)
+        .eq("id", id ?? "")
         .maybeSingle();
       if (error) throw error;
       if (data?.quote_items) {
@@ -214,7 +214,7 @@ function NewQuote() {
 
       const { error: itemsError } = await supabase.from("quote_items").insert(
         items.map((item, index) => ({
-          quote_id: quoteId,
+          quote_id: quoteId as string,
           product: item.product,
           quantity: item.quantity,
           unit_price: item.unitPrice,
